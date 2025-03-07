@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Author: Wylie Hobbs - 2017
 #
 
@@ -45,7 +45,7 @@ def get_stats():
   last_minute = (now - datetime.timedelta(minutes=1)).strftime("%H:%M")
   metric_counts = {}
   log_chunk = read_log()
-  for metric_name, metric_regex in METRICS.iteritems():
+  for metric_name, metric_regex in METRICS.items():
     metric_regex = "%s\s+%s\s+%s.*%s" % (month, day, last_minute, metric_regex)
     count = parse_log(log_chunk, metric_name, metric_regex)
     metric_counts[metric_name] = count
@@ -53,7 +53,7 @@ def get_stats():
   if CHECK_MAILQUEUE:
     code_counts, q_size = process_mailqueue()
     metric_counts['total-queue-size'] = q_size
-    for code, value in code_counts.items():
+    for code, value in list(code_counts.items()):
       index = 'queue-reason-%s' % code
       metric_counts[index] = value
 
@@ -73,7 +73,7 @@ def process_mailqueue():
       response_code = code.group(1)
       try:
         code_counts[response_code] += 1
-      except KeyError, e:
+      except KeyError as e:
         code_counts[response_code] = 1
 
   return code_counts, total_queue_size
@@ -87,7 +87,7 @@ def parse_mailqueue():
   hre = '.*Queue ID.*'
   idre = '^(?P<id>[0-9A-Z]+)\s+(?P<size>[0-9]+)\s+(?P<dow>\S+)\s+(?P<mon>\S+)\s+(?P<day>[0-9]+)\s+(?P<time>\S+)\s+(?P<sender>\S+)(?:\n|\r)(?P<reason>\(.*\w+.*\S+)(?:\n|\r)\s+(?P<recipient>[\w\@\w\.\w]+)'
 
-  lines = re.split('\n\n', output.read())
+  lines = re.split('\n\n', output.read().decode())
   for line in lines:
     line = line.rstrip()
     if re.search(hre,line): continue
@@ -139,12 +139,11 @@ def configure_callback(conf):
 def read_callback():
   logger('verb', "beginning read_callback")
   info = get_stats()
-
-  if not info or all(metric == 0 for metric in info.values()):
+  if not info:
     logger('warn', "%s: No data received" % NAME)
     return
 
-  for key,value in info.items():
+  for key,value in list(info.items()):
     key_name = key
     val = collectd.Values(plugin=NAME, type='gauge')
     val.type_instance = key_name
